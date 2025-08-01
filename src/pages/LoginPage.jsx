@@ -59,7 +59,18 @@ const LoginPage = () => {
     try {
       const result = await login(formData.email, formData.password);
 
+      console.log("Login result:", result); // Debug log
+
       if (result.success) {
+        // Validate that user data exists
+        if (!result.user) {
+          throw new Error("Login succeeded but user data is missing");
+        }
+
+        if (!result.user.role) {
+          throw new Error("Login succeeded but user role is missing");
+        }
+
         // Redirect based on user role
         const { user } = result;
         let redirectPath = from;
@@ -85,7 +96,10 @@ const LoginPage = () => {
         setErrors({ submit: result.error });
       }
     } catch (error) {
-      setErrors({ submit: "An unexpected error occurred. Please try again." });
+      console.error("Unexpected login error:", error);
+      setErrors({
+        submit: `An unexpected error occurred: ${error.message}. Please try again.`,
+      });
     } finally {
       setLoading(false);
     }

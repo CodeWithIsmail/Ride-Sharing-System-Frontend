@@ -83,6 +83,10 @@ const RegisterPage = () => {
         userData.phone = formData.phone.trim();
       }
 
+      console.log("Submitting registration with:", {
+        ...userData,
+        password: "***",
+      });
       const result = await register(userData);
 
       if (result.success) {
@@ -95,7 +99,10 @@ const RegisterPage = () => {
         setErrors({ submit: result.error });
       }
     } catch (error) {
-      setErrors({ submit: "An unexpected error occurred. Please try again." });
+      console.error("Unexpected registration error:", error);
+      setErrors({
+        submit: `An unexpected error occurred: ${error.message}. Please try again.`,
+      });
     } finally {
       setLoading(false);
     }

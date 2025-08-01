@@ -144,6 +144,12 @@ const Navbar = () => {
             ) : (
               <>
                 <li className="nav-item">
+                  <Link className="nav-link" to="/debug">
+                    <i className="fas fa-bug me-1"></i>
+                    Debug
+                  </Link>
+                </li>
+                <li className="nav-item">
                   <Link className="nav-link" to="/login">
                     <i className="fas fa-sign-in-alt me-1"></i>
                     Login

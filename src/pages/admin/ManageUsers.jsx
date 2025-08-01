@@ -71,7 +71,7 @@ const ManageUsers = () => {
           await adminService.updateUserStatus(userId, { isActive: true });
           break;
         case "deactivate":
-          await adminService.updateUserStatus(userId, { isActive: false });
+          await adminService.deactivateUser(userId);
           break;
         case "delete":
           if (

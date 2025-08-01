@@ -3,10 +3,11 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
+import DebugPage from "./pages/DebugPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
-import RegisterPage from "./pages/RegisterPage";
+import RegisterPage from "./pages/RegisterPageNew";
 
 // Passenger Pages
 import PassengerDashboard from "./pages/passenger/PassengerDashboard";
@@ -36,6 +37,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/debug" element={<DebugPage />} />
 
         {/* Protected Routes - All Users */}
         <Route

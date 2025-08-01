@@ -6,10 +6,31 @@ const RIDE_SERVICE_URL = "http://localhost:3002/api";
 const PAYMENT_SERVICE_URL = "http://localhost:3003/api";
 const ADMIN_SERVICE_URL = "http://localhost:3004/api";
 
+// Create axios instances for each service with interceptors
+const createAxiosInstance = (baseURL) => {
+  const instance = axios.create({ baseURL });
+
+  // Request interceptor to add auth token
+  instance.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  return instance;
+};
+
+const userApi = createAxiosInstance(USER_SERVICE_URL);
+const rideApi = createAxiosInstance(RIDE_SERVICE_URL);
+const paymentApi = createAxiosInstance(PAYMENT_SERVICE_URL);
+const adminApi = createAxiosInstance(ADMIN_SERVICE_URL);
+
 // User Service APIs
 export const userService = {
   login: async (email, password) => {
-    const response = await axios.post(`${USER_SERVICE_URL}/auth/login`, {
+    const response = await userApi.post("/auth/login", {
       email,
       password,
     });
@@ -17,41 +38,32 @@ export const userService = {
   },
 
   register: async (userData) => {
-    const response = await axios.post(
-      `${USER_SERVICE_URL}/auth/register`,
-      userData
-    );
+    const response = await userApi.post("/auth/register", userData);
     return response.data;
   },
 
   logout: async () => {
-    const response = await axios.post(`${USER_SERVICE_URL}/auth/logout`);
+    const response = await userApi.post("/auth/logout");
     return response.data;
   },
 
   verifyToken: async () => {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/verify`);
+    const response = await userApi.get("/users/verify");
     return response.data;
   },
 
   getUserById: async (userId) => {
-    const response = await axios.get(`${USER_SERVICE_URL}/users/${userId}`);
+    const response = await userApi.get(`/users/${userId}`);
     return response.data;
   },
 
   updateProfile: async (profileData) => {
-    const response = await axios.put(
-      `${USER_SERVICE_URL}/users/profile`,
-      profileData
-    );
+    const response = await userApi.put("/users/profile", profileData);
     return response.data;
   },
 
   changePassword: async (passwordData) => {
-    const response = await axios.put(
-      `${USER_SERVICE_URL}/users/password`,
-      passwordData
-    );
+    const response = await userApi.put("/users/password", passwordData);
     return response.data;
   },
 };
@@ -59,50 +71,41 @@ export const userService = {
 // Ride Service APIs
 export const rideService = {
   createRide: async (rideData) => {
-    const response = await axios.post(`${RIDE_SERVICE_URL}/rides`, rideData);
+    const response = await rideApi.post("/rides", rideData);
     return response.data;
   },
 
   getRides: async (status = "") => {
-    const response = await axios.get(
-      `${RIDE_SERVICE_URL}/rides${status ? `?status=${status}` : ""}`
+    const response = await rideApi.get(
+      `/rides${status ? `?status=${status}` : ""}`
     );
     return response.data;
   },
 
   applyForRide: async (rideRequestId) => {
-    const response = await axios.post(
-      `${RIDE_SERVICE_URL}/rides/${rideRequestId}/apply`
-    );
+    const response = await rideApi.post(`/rides/${rideRequestId}/apply`);
     return response.data;
   },
 
   getRideApplications: async (rideRequestId) => {
-    const response = await axios.get(
-      `${RIDE_SERVICE_URL}/rides/${rideRequestId}/applications`
-    );
+    const response = await rideApi.get(`/rides/${rideRequestId}/applications`);
     return response.data;
   },
 
   selectDriver: async (rideRequestId, driverId) => {
-    const response = await axios.post(
-      `${RIDE_SERVICE_URL}/rides/${rideRequestId}/select`,
-      { driverId }
-    );
+    const response = await rideApi.post(`/rides/${rideRequestId}/select`, {
+      driverId,
+    });
     return response.data;
   },
 
   cancelRide: async (rideRequestId) => {
-    const response = await axios.post(
-      `${RIDE_SERVICE_URL}/rides/${rideRequestId}/cancel`
-    );
+    const response = await rideApi.post(`/rides/${rideRequestId}/cancel`);
     return response.data;
   },
 
   completeRide: async (rideRequestId) => {
-    const response = await axios.post(
-      `${RIDE_SERVICE_URL}/rides/${rideRequestId}/complete`
-    );
+    const response = await rideApi.post(`/rides/${rideRequestId}/complete`);
     return response.data;
   },
 };
@@ -110,17 +113,14 @@ export const rideService = {
 // Payment Service APIs
 export const paymentService = {
   recordPayment: async (rideRequestId, amount) => {
-    const response = await axios.post(
-      `${PAYMENT_SERVICE_URL}/payments/${rideRequestId}`,
-      { amount }
-    );
+    const response = await paymentApi.post(`/payments/${rideRequestId}`, {
+      amount,
+    });
     return response.data;
   },
 
   generateReceipt: async (paymentId) => {
-    const response = await axios.post(
-      `${PAYMENT_SERVICE_URL}/payments/${paymentId}/receipt`
-    );
+    const response = await paymentApi.post(`/payments/${paymentId}/receipt`);
     return response.data;
   },
 };
@@ -128,44 +128,50 @@ export const paymentService = {
 // Admin Service APIs
 export const adminService = {
   getAllUsers: async () => {
-    const response = await axios.get(`${ADMIN_SERVICE_URL}/admin/users`);
+    const response = await adminApi.get("/admin/users");
     return response.data;
   },
 
   updateUserStatus: async (userId, statusData) => {
-    const response = await axios.patch(
-      `${ADMIN_SERVICE_URL}/admin/users/${userId}/status`,
+    const response = await adminApi.patch(
+      `/admin/users/${userId}/status`,
       statusData
     );
     return response.data;
   },
 
+  deactivateUser: async (userId) => {
+    const response = await adminApi.patch(`/admin/users/${userId}/deactivate`);
+    return response.data;
+  },
+
   deleteUser: async (userId) => {
-    const response = await axios.delete(
-      `${ADMIN_SERVICE_URL}/admin/users/${userId}`
-    );
+    const response = await adminApi.delete(`/admin/users/${userId}`);
     return response.data;
   },
 
   getAllRides: async (status = "") => {
-    const response = await axios.get(
-      `${ADMIN_SERVICE_URL}/admin/rides${status ? `?status=${status}` : ""}`
+    const response = await adminApi.get(
+      `/admin/rides${status ? `?status=${status}` : ""}`
     );
     return response.data;
   },
 
   updateRideStatus: async (rideId, statusData) => {
-    const response = await axios.patch(
-      `${ADMIN_SERVICE_URL}/admin/rides/${rideId}/status`,
+    const response = await adminApi.patch(
+      `/admin/rides/${rideId}/status`,
       statusData
     );
     return response.data;
   },
 
   deleteRide: async (rideId) => {
-    const response = await axios.delete(
-      `${ADMIN_SERVICE_URL}/admin/rides/${rideId}`
-    );
+    const response = await adminApi.delete(`/admin/rides/${rideId}`);
+    return response.data;
+  },
+
+  getSystemStats: async () => {
+    const response = await adminApi.get("/admin/stats");
     return response.data;
   },
 };

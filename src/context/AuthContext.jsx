@@ -1,5 +1,11 @@
 import axios from "axios";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 const AuthContext = createContext();
 
@@ -15,6 +21,22 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem("token"));
+
+  // Logout function (defined early to avoid reference issues)
+  const logout = useCallback(async () => {
+    try {
+      if (token) {
+        await axios.post("http://localhost:3001/api/auth/logout");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+    }
+  }, [token]);
 
   // Configure axios defaults
   useEffect(() => {
@@ -33,7 +55,19 @@ export const AuthProvider = ({ children }) => {
           const response = await axios.get(
             "http://localhost:3001/api/users/verify"
           );
-          setUser(response.data.user);
+
+          console.log("Token verification response:", response.data);
+
+          // Handle different possible response structures for verification
+          let userData = null;
+          if (response.data.user) {
+            userData = response.data.user;
+          } else {
+            // If user data is directly in response
+            userData = response.data;
+          }
+
+          setUser(userData);
         } catch (error) {
           console.error("Token verification failed:", error);
 
@@ -43,6 +77,7 @@ export const AuthProvider = ({ children }) => {
             error.response?.status === 403
           ) {
             console.log("Token expired or invalid, logging out...");
+            logout();
           } else if (
             error.code === "ERR_NETWORK" ||
             error.message.includes("Network Error")
@@ -53,16 +88,17 @@ export const AuthProvider = ({ children }) => {
             // Don't logout on network errors, keep token for when backend comes back
             setLoading(false);
             return;
+          } else {
+            // For other errors, also logout
+            logout();
           }
-
-          logout();
         }
       }
       setLoading(false);
     };
 
     verifyToken();
-  }, [token]);
+  }, [token, logout]);
 
   const login = async (email, password) => {
     try {
@@ -74,7 +110,29 @@ export const AuthProvider = ({ children }) => {
         }
       );
 
-      const { token: newToken, user: userData } = response.data;
+      console.log("Login response:", response.data);
+
+      const { token: newToken, userId, role } = response.data;
+
+      // Validate that we have the required data
+      if (!newToken) {
+        throw new Error("No token received from server");
+      }
+
+      if (!userId) {
+        throw new Error("No userId received from server");
+      }
+
+      if (!role) {
+        throw new Error("No role received from server");
+      }
+
+      // Create user object from login response
+      const userData = {
+        userId,
+        role,
+        email, // We know the email from the login request
+      };
 
       setToken(newToken);
       setUser(userData);
@@ -105,10 +163,19 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      // Handle other HTTP errors
+      if (error.response) {
+        return {
+          success: false,
+          error:
+            error.response?.data?.message ||
+            `Server error (${error.response.status}). Please try again.`,
+        };
+      }
+
       return {
         success: false,
-        error:
-          error.response?.data?.message || "Login failed. Please try again.",
+        error: "Login failed. Please try again.",
       };
     }
   };
@@ -139,27 +206,39 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      // Handle validation errors (400)
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          error:
+            error.response?.data?.message ||
+            "Invalid data provided. Please check your information.",
+        };
+      }
+
+      // Handle conflict errors (409) - user already exists
+      if (error.response?.status === 409) {
+        return {
+          success: false,
+          error:
+            "An account with this email already exists. Please use a different email or try logging in.",
+        };
+      }
+
+      // Handle other HTTP errors
+      if (error.response) {
+        return {
+          success: false,
+          error:
+            error.response?.data?.message ||
+            `Server error (${error.response.status}). Please try again.`,
+        };
+      }
+
       return {
         success: false,
-        error:
-          error.response?.data?.message ||
-          "Registration failed. Please try again.",
+        error: "Registration failed. Please try again.",
       };
-    }
-  };
-
-  const logout = async () => {
-    try {
-      if (token) {
-        await axios.post("http://localhost:3001/api/auth/logout");
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      setToken(null);
-      setUser(null);
-      localStorage.removeItem("token");
-      delete axios.defaults.headers.common["Authorization"];
     }
   };
 

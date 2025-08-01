@@ -1,5 +1,9 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import {
+  checkBackendHealth,
+  testAuthEndpoints,
+} from "../utils/backendHealthCheck";
 
 const ServiceStatus = () => {
   const [services, setServices] = useState({
@@ -8,10 +12,21 @@ const ServiceStatus = () => {
     paymentService: { status: "checking", url: "http://localhost:3003" },
     adminService: { status: "checking", url: "http://localhost:3004" },
   });
+  const [backendHealth, setBackendHealth] = useState(null);
+  const [authEndpoints, setAuthEndpoints] = useState(null);
 
   useEffect(() => {
     checkServices();
+    checkMainBackend();
   }, []);
+
+  const checkMainBackend = async () => {
+    const health = await checkBackendHealth();
+    setBackendHealth(health);
+
+    const endpoints = await testAuthEndpoints();
+    setAuthEndpoints(endpoints);
+  };
 
   const checkServices = async () => {
     const serviceChecks = Object.keys(services).map(async (serviceName) => {
@@ -118,13 +133,68 @@ const ServiceStatus = () => {
           </h6>
           <button
             className="btn btn-sm btn-outline-secondary"
-            onClick={checkServices}
+            onClick={() => {
+              checkServices();
+              checkMainBackend();
+            }}
           >
             <i className="fas fa-sync-alt"></i>
           </button>
         </div>
       </div>
       <div className="card-body py-2">
+        {/* Backend Health Status */}
+        {backendHealth && (
+          <div className="mb-3">
+            <h6 className="text-muted mb-2">Main Backend (Port 3001)</h6>
+            <div
+              className={`alert ${
+                backendHealth.status === "online"
+                  ? "alert-success"
+                  : "alert-danger"
+              } py-2 mb-2`}
+            >
+              <small>
+                <strong>Status:</strong> {backendHealth.message}
+                {backendHealth.error && (
+                  <div className="mt-1">
+                    <strong>Error:</strong> {backendHealth.error}
+                  </div>
+                )}
+              </small>
+            </div>
+
+            {/* Auth Endpoints Status */}
+            {authEndpoints && (
+              <div className="mb-2">
+                <h6
+                  className="text-muted mb-1"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  Auth Endpoints
+                </h6>
+                {Object.entries(authEndpoints).map(([endpoint, status]) => (
+                  <div
+                    key={endpoint}
+                    className="d-flex justify-content-between align-items-center mb-1"
+                  >
+                    <small className="text-muted">{endpoint}</small>
+                    <small
+                      className={
+                        status.includes("✅") ? "text-success" : "text-danger"
+                      }
+                    >
+                      {status}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Other Services */}
+        <h6 className="text-muted mb-2">Other Services</h6>
         <div className="row g-2">
           {Object.entries(services).map(([key, service]) => (
             <div key={key} className="col-md-3">
