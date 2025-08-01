@@ -36,6 +36,25 @@ export const AuthProvider = ({ children }) => {
           setUser(response.data.user);
         } catch (error) {
           console.error("Token verification failed:", error);
+
+          // If token is invalid or expired, clear it
+          if (
+            error.response?.status === 401 ||
+            error.response?.status === 403
+          ) {
+            console.log("Token expired or invalid, logging out...");
+          } else if (
+            error.code === "ERR_NETWORK" ||
+            error.message.includes("Network Error")
+          ) {
+            console.log(
+              "Backend service unavailable, keeping token for retry..."
+            );
+            // Don't logout on network errors, keep token for when backend comes back
+            setLoading(false);
+            return;
+          }
+
           logout();
         }
       }
@@ -64,9 +83,32 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: userData };
     } catch (error) {
       console.error("Login error:", error);
+
+      // Check if it's a network error (backend not running)
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        return {
+          success: false,
+          error:
+            "Unable to connect to the server. Please make sure the backend services are running on port 3001.",
+        };
+      }
+
+      // Handle 401 Unauthorized
+      if (error.response?.status === 401) {
+        return {
+          success: false,
+          error:
+            "Invalid email or password. Please check your credentials and try again.",
+        };
+      }
+
       return {
         success: false,
-        error: error.response?.data?.message || "Login failed",
+        error:
+          error.response?.data?.message || "Login failed. Please try again.",
       };
     }
   };
@@ -77,12 +119,31 @@ export const AuthProvider = ({ children }) => {
         "http://localhost:3001/api/auth/register",
         userData
       );
-      return { success: true, message: "Registration successful" };
+      return {
+        success: true,
+        message: "Registration successful",
+        data: response.data,
+      };
     } catch (error) {
       console.error("Registration error:", error);
+
+      // Check if it's a network error (backend not running)
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network Error")
+      ) {
+        return {
+          success: false,
+          error:
+            "Unable to connect to the server. Please make sure the backend services are running on port 3001.",
+        };
+      }
+
       return {
         success: false,
-        error: error.response?.data?.message || "Registration failed",
+        error:
+          error.response?.data?.message ||
+          "Registration failed. Please try again.",
       };
     }
   };
@@ -102,6 +163,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedUserData) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      ...updatedUserData,
+    }));
+  };
+
   const value = {
     user,
     token,
@@ -109,6 +177,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!user,
     isPassenger: user?.role === "passenger",
     isDriver: user?.role === "driver",

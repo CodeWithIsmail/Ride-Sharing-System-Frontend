@@ -65,14 +65,47 @@ The application follows a microservice architecture pattern with separate backen
    npm install
    ```
 
-3. **Start the development server**
+3. **Set up backend services**
+
+   **Option A: Use Mock Server (for testing/development)**
 
    ```bash
+   # Navigate to mock server directory
+   cd mock-server
+
+   # Install mock server dependencies
+   npm install
+
+   # Start mock backend services
+   npm start
+   ```
+
+   **Option B: Set up actual backend services**
+
+   See [BACKEND_SETUP.md](./BACKEND_SETUP.md) for detailed instructions on setting up the actual backend microservices.
+
+4. **Start the development server**
+
+   ```bash
+   # Return to project root
+   cd ..
+
+   # Start frontend
    npm run dev
    ```
 
-4. **Open your browser**
+5. **Open your browser**
    Navigate to `http://localhost:5173`
+
+## 🧪 Testing with Mock Data
+
+The mock server provides test accounts:
+
+- **Passenger**: `passenger@test.com` / `password123`
+- **Driver**: `driver@test.com` / `password123`
+- **Admin**: `admin@test.com` / `password123`
+
+The service status component on the landing page will show green indicators when the mock server is running.
 
 ## 📁 Project Structure
 
