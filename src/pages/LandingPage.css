@@ -1,0 +1,5 @@
+/* src/pages/LandingPage.css */
+.landing {
+  height: 100vh;
+  background: linear-gradient(135deg, #0072ff, #00c6ff);
+}
