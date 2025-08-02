@@ -26,7 +26,7 @@ const AvailableRides = () => {
   const fetchAvailableRides = async () => {
     try {
       setLoading(true);
-      const response = await rideService.getRides("posted");
+      const response = await rideService.getAvailableRides("posted");
       const availableRides = response.rides || [];
 
       // Filter out rides where this driver has already applied

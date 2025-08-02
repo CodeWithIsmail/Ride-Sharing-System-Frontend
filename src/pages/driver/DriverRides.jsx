@@ -21,7 +21,7 @@ const DriverRides = () => {
   const fetchDriverRides = async () => {
     try {
       setLoading(true);
-      const response = await rideService.getRides();
+      const response = await rideService.getAvailableRides();
       const allRides = response.rides || [];
 
       // Get rides where this driver is involved (either confirmed/completed or applied)

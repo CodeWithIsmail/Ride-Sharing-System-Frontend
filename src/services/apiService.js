@@ -75,10 +75,21 @@ export const rideService = {
     return response.data;
   },
 
-  getRides: async (status = "") => {
-    const response = await rideApi.get(
-      `/rides${status ? `?status=${status}` : ""}`
-    );
+  // For passengers - get their own ride requests
+  getPassengerRides: async () => {
+    const response = await rideApi.get("/rides");
+    return response.data;
+  },
+
+  // For drivers - get available ride requests to apply for
+  getAvailableRides: async () => {
+    const response = await rideApi.get("/rides");
+    return response.data;
+  },
+
+  // Get specific ride details by ID
+  getRideById: async (rideId) => {
+    const response = await rideApi.get(`/rides/${rideId}`);
     return response.data;
   },
 
@@ -108,9 +119,7 @@ export const rideService = {
     const response = await rideApi.post(`/rides/${rideRequestId}/complete`);
     return response.data;
   },
-};
-
-// Payment Service APIs
+}; // Payment Service APIs
 export const paymentService = {
   recordPayment: async (rideRequestId, amount) => {
     const response = await paymentApi.post(`/payments/${rideRequestId}`, {

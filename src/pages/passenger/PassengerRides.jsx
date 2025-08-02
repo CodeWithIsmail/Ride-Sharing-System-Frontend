@@ -28,22 +28,27 @@ const PassengerRides = () => {
   const fetchRides = async () => {
     try {
       setLoading(true);
-      const response = await rideService.getRides();
-      const allRides = response.rides || [];
 
-      // Filter rides for current passenger
-      const passengerRides = allRides.filter(
-        (ride) => ride.passengerId === user._id
-      );
+      console.log("Current user:", user);
+      console.log("Fetching rides for passenger...");
 
-      // Sort by creation date (newest first)
-      const sortedRides = passengerRides.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      const response = await rideService.getMyRides();
+      console.log("Rides response:", response);
+
+      // Based on API docs, response is directly an array for passengers
+      const allRides = Array.isArray(response) ? response : [];
+
+      // Backend already filters by passenger, so no need to filter again
+      // Just sort by targetTime (newest first)
+      const sortedRides = allRides.sort(
+        (a, b) => new Date(b.targetTime) - new Date(a.targetTime)
       );
 
       setRides(sortedRides);
     } catch (error) {
       console.error("Error fetching rides:", error);
+      // Set empty array on error
+      setRides([]);
     } finally {
       setLoading(false);
     }
@@ -269,7 +274,7 @@ const PassengerRides = () => {
       ) : (
         <div className="row g-4">
           {filteredRides.map((ride) => (
-            <div key={ride._id} className="col-12">
+            <div key={ride.rideRequestId} className="col-12">
               <div className="card border-0 shadow-sm h-100">
                 <div className="card-body p-4">
                   <div className="row align-items-center">
@@ -330,7 +335,7 @@ const PassengerRides = () => {
                           {ride.status === "posted" && (
                             <>
                               <Link
-                                to={`/passenger/ride/${ride._id}/applications`}
+                                to={`/passenger/ride/${ride.rideRequestId}/applications`}
                                 className="btn btn-primary btn-sm"
                               >
                                 <i className="fas fa-users me-2"></i>
@@ -338,7 +343,9 @@ const PassengerRides = () => {
                               </Link>
                               <button
                                 className="btn btn-outline-danger btn-sm"
-                                onClick={() => handleCancelRide(ride._id)}
+                                onClick={() =>
+                                  handleCancelRide(ride.rideRequestId)
+                                }
                               >
                                 <i className="fas fa-times me-2"></i>
                                 Cancel
@@ -348,7 +355,7 @@ const PassengerRides = () => {
 
                           {ride.status === "confirmed" && (
                             <Link
-                              to={`/payment/${ride._id}`}
+                              to={`/payment/${ride.rideRequestId}`}
                               className="btn btn-success btn-sm"
                             >
                               <i className="fas fa-credit-card me-2"></i>
@@ -379,7 +386,7 @@ const PassengerRides = () => {
                     </div>
                     <div className="col-md-6 text-md-end">
                       <i className="fas fa-hashtag me-2"></i>
-                      Ride ID: {ride._id.slice(-8)}
+                      Ride ID: {ride.rideRequestId.slice(-8)}
                     </div>
                   </div>
                 </div>

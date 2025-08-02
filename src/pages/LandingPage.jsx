@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import ServiceStatus from "../components/ServiceStatus";
 import { useAuth } from "../context/AuthContext";
 import "./LandingPage.css";
 
@@ -15,11 +14,6 @@ const LandingPage = () => {
 
   return (
     <>
-      {/* Service Status Component */}
-      <div className="container pt-3">
-        <ServiceStatus />
-      </div>
-
       {/* Hero Section */}
       <section className="hero-section">
         <div className="container">

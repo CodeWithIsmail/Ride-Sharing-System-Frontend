@@ -10,10 +10,10 @@ import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPageNew";
 
 // Passenger Pages
+import MyRideHistory from "./pages/passenger/MyRideHistory";
 import PassengerDashboard from "./pages/passenger/PassengerDashboard";
-import PassengerRides from "./pages/passenger/PassengerRides";
 import RequestRide from "./pages/passenger/RequestRide";
-import RideApplications from "./pages/passenger/RideApplications";
+import RideDetail from "./pages/passenger/RideDetail";
 
 // Driver Pages
 import AvailableRides from "./pages/driver/AvailableRides";
@@ -75,10 +75,18 @@ function App() {
           }
         />
         <Route
-          path="/passenger/ride/:rideId/applications"
+          path="/passenger/ride/:rideRequestId/applications"
           element={
             <ProtectedRoute roles={["passenger"]}>
               <RideApplications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/passenger/ride/:rideRequestId"
+          element={
+            <ProtectedRoute roles={["passenger"]}>
+              <RideDetail />
             </ProtectedRoute>
           }
         />

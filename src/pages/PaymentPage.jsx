@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { paymentService } from "../services/apiService";
+import { paymentService, rideService } from "../services/apiService";
 
 const PaymentPage = () => {
   const { rideId } = useParams();
@@ -15,23 +15,47 @@ const PaymentPage = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    // In a real app, you'd fetch the ride details
-    // For now, we'll simulate the ride data
-    setRide({
-      _id: rideId,
-      pickupLocation: "Shahbag, Dhaka",
-      dropoffLocation: "Dhanmondi, Dhaka",
-      desiredFare: 150,
-      targetTime: new Date().toISOString(),
-      status: "completed",
-    });
+    const fetchRideDetails = async () => {
+      try {
+        setLoading(true);
 
-    setPaymentData((prev) => ({
-      ...prev,
-      amount: "150", // Set default amount from ride
-    }));
+        // Try to fetch actual ride details
+        const rideResponse = await rideService.getRideById(rideId);
+        const rideData = rideResponse.ride || rideResponse;
 
-    setLoading(false);
+        setRide(rideData);
+        setPaymentData((prev) => ({
+          ...prev,
+          amount: rideData.desiredFare ? rideData.desiredFare.toString() : "",
+        }));
+      } catch (error) {
+        console.error("Error fetching ride details:", error);
+
+        // Fallback to mock data if ride not found
+        setRide({
+          _id: rideId,
+          rideRequestId: rideId,
+          pickupLocation: "Pickup Location",
+          dropoffLocation: "Destination",
+          desiredFare: 0,
+          targetTime: new Date().toISOString(),
+          status: "completed",
+        });
+
+        setPaymentData((prev) => ({
+          ...prev,
+          amount: "",
+        }));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (rideId) {
+      fetchRideDetails();
+    } else {
+      setLoading(false);
+    }
   }, [rideId]);
 
   const handleInputChange = (e) => {

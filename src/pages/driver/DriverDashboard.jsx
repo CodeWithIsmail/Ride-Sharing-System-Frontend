@@ -23,7 +23,7 @@ const DriverDashboard = () => {
       setLoading(true);
 
       // Fetch all rides
-      const response = await rideService.getRides();
+      const response = await rideService.getAvailableRides();
       const allRides = response.rides || [];
 
       // Calculate stats
