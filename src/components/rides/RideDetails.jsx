@@ -1,140 +1,124 @@
 // src/components/rides/RideDetails.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 const RideDetails = () => {
     const { rideId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    const [ride, setRide] = useState(null);
+    // The ride data passed from the MyRides page
+    const ride = location.state?.ride; 
+
     const [applications, setApplications] = useState([]);
-    const [confirmedDriver, setConfirmedDriver] = useState(null);
-    
+    const [isRidePosted, setIsRidePosted] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
     const [message, setMessage] = useState('');
 
-    const fetchDriverDetails = useCallback(async (driverId) => {
-        try {
-            const response = await api.get(`/users/${driverId}`);
-            return response.data;
-        } catch (error) {
-            console.error(`Failed to fetch details for driver ${driverId}`, error);
-            return { name: 'Unknown Driver', phone: 'N/A' };
-        }
-    }, []);
-
     useEffect(() => {
-        const fetchAllRideData = async () => {
+        // If the user navigates here directly, the ride object won't exist.
+        if (!ride) {
+            setLoading(false);
+            return;
+        }
+
+        const checkApplications = async () => {
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                
-                const rideResponse = await axios.get(`http://localhost:3002/api/rides/${rideId}`, {
+                // We attempt to fetch applications for the ride.
+                const response = await axios.get(`http://localhost:3002/api/rides/${rideId}/applications`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                const rideData = rideResponse.data;
-                setRide(rideData);
+                
+                // If the API call succeeds, the ride is 'posted' and we have applications.
+                setApplications(response.data);
+                setIsRidePosted(true);
 
-                if (rideData.status === 'posted') {
-                    const appResponse = await axios.get(`http://localhost:3002/api/rides/${rideId}/applications`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    
-                    const enrichedApplications = await Promise.all(
-                        appResponse.data.map(async (app) => ({
-                            ...app,
-                            driverInfo: await fetchDriverDetails(app.driverId),
-                        }))
-                    );
-                    setApplications(enrichedApplications);
-                } else if (rideData.driverId) {
-                    const driverInfo = await fetchDriverDetails(rideData.driverId);
-                    setConfirmedDriver(driverInfo);
-                }
             } catch (err) {
-                setError('Failed to load ride details.');
-                console.error(err);
+                // If the API call fails (e.g., 404), it means the ride is no longer posted.
+                // This is expected for 'confirmed' or 'completed' rides.
+                console.log("Could not fetch applications, ride is likely confirmed or completed.", err.response?.data);
+                setIsRidePosted(false);
             } finally {
                 setLoading(false);
             }
         };
-        fetchAllRideData();
-    }, [rideId, fetchDriverDetails]);
+
+        checkApplications();
+    }, [ride, rideId]);
 
     const handleSelectDriver = async (driverId) => {
         setMessage('Confirming driver...');
         try {
             const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:3002/api/rides/${rideId}/select`, 
-                { driverId }, 
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setMessage('Driver selected successfully! The page will now refresh.');
-            setTimeout(() => window.location.reload(), 2000);
+            await axios.post(`http://localhost:3002/api/rides/${rideId}/select`, { driverId }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setMessage('Driver selected successfully! This ride is now confirmed.');
+            // After selection, the application list is no longer relevant for this view.
+            setIsRidePosted(false); 
         } catch (err) {
             setMessage('Failed to select driver. Please try again.');
             console.error(err);
         }
     };
 
-    if (loading) return <p className="text-center mt-5">Loading Ride Details...</p>;
-    if (error) return <p className="alert alert-danger">{error}</p>;
-    if (!ride) return <p>Ride not found.</p>;
+    // Handle the case where a user might land on this page without ride data
+    if (!ride) {
+        return (
+            <div className="container mt-5">
+                <div className="alert alert-danger">
+                    <strong>Error:</strong> No ride data found. Please go back to the "My Rides" list and click on a ride to see its details.
+                </div>
+                <button onClick={() => navigate('/my-rides')} className="btn btn-secondary">Back to My Rides</button>
+            </div>
+        );
+    }
 
     return (
         <div className="container mt-5">
             <div className="card">
-                <div className="card-header d-flex justify-content-between align-items-center">
+                <div className="card-header">
                     <h3>Ride Details</h3>
-                    <span className={`badge bg-${ride.status === 'completed' ? 'success' : 'info'} p-2 fs-6`}>{ride.status.toUpperCase()}</span>
                 </div>
                 <div className="card-body">
                     <h5 className="card-title">{ride.pickupLocation} to {ride.dropoffLocation}</h5>
                     <p className="card-text"><strong>Fare:</strong> ${ride.desiredFare}</p>
                     <p className="card-text"><strong>Time:</strong> {new Date(ride.targetTime).toLocaleString()}</p>
-                    <hr />
+                    <p className="text-muted">Status: <strong>{isRidePosted ? 'Awaiting Driver Selection' : 'Driver Confirmed or Completed'}</strong></p>
+                </div>
+            </div>
 
-                    {message && <div className="alert alert-info">{message}</div>}
+            {message && <div className="alert alert-info mt-3">{message}</div>}
 
-                    {ride.status !== 'posted' && confirmedDriver && (
-                        <div className="alert alert-success">
-                            <h6 className="alert-heading">Your Confirmed Driver</h6>
-                            <p><strong>Name:</strong> {confirmedDriver.name}</p>
-                            <p className="mb-0"><strong>Phone:</strong> {confirmedDriver.phone}</p>
-                        </div>
-                    )}
-
-                    {ride.status === 'posted' && (
-                        <>
-                            <h4>Driver Applications</h4>
+            {loading ? <p className="mt-3">Loading applications...</p> : (
+                isRidePosted && (
+                    <div className="card mt-4">
+                        <div className="card-header"><h4>Driver Applications</h4></div>
+                        <div className="card-body">
                             {applications.length > 0 ? (
                                 <ul className="list-group">
                                     {applications.map(app => (
-                                        <li key={app._id} className="list-group-item d-flex justify-content-between align-items-center">
+                                        <li key={app.applicationId} className="list-group-item d-flex justify-content-between align-items-center">
                                             <div>
-                                                <strong>Driver:</strong> {app.driverInfo.name} <br/>
-                                                <strong>Contact:</strong> {app.driverInfo.phone}
+                                                <strong>Driver:</strong> {app.driverName} <br/>
+                                                <strong>Contact:</strong> {app.driverPhone}
                                             </div>
-                                            <button onClick={() => handleSelectDriver(app.driverId)} className="btn btn-sm btn-primary" disabled={!!message}>
+                                            <button onClick={() => handleSelectDriver(app.driverId)} className="btn btn-sm btn-success" disabled={!!message}>
                                                 Select & Confirm
                                             </button>
                                         </li>
                                     ))}
                                 </ul>
                             ) : (<p>No drivers have applied for this ride yet.</p>)}
-                        </>
-                    )}
-
-                    <div className="mt-4">
-                        <button onClick={() => navigate('/my-rides')} className="btn btn-secondary">
-                            Back to My Rides
-                        </button>
+                        </div>
                     </div>
-                </div>
-            </div>
+                )
+            )}
+            
+            <button onClick={() => navigate('/my-rides')} className="btn btn-secondary mt-4">Back to My Rides</button>
         </div>
     );
 };
